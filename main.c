@@ -7,9 +7,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-/*void config_port(*termios){
-    
-}*/
+void config_port(struct termios *tty){
+    tty->c_cflag &= ~(PARENB | CSTOPB | CSIZE | CRTSCTS);
+    tty->c_cflag |= CS8 | CREAD | CLOCAL;
+    tty->c_lflag &= ~(ICANON | ECHO | ECHONL | ECHOE | ISIG);
+    tty->c_iflag &= ~(IXON | IXOFF | IXANY | IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL);
+    tty->c_oflag &= ~(OPOST | ONLCR);
+    tty->c_cc[VTIME] = 20;
+    tty->c_cc[VMIN] = 0;
+    cfsetispeed(tty, B4800);
+    cfsetospeed(tty, B4800);
+}
 
 //Call - at89prog <serial device> <hex file>
 //For now only device read is supported...
@@ -36,6 +44,13 @@ int main(int argc, char **argv){
     struct termios tty;
 
     if(tcgetattr(serial_port_fd, &tty)){
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+        return 4;
+    }
+    
+    config_port(&tty);
+
+    if(tcsetattr(serial_port_fd, TCSANOW, &tty)){
         fprintf(stderr, "Error: %s\n", strerror(errno));
         return 4;
     }
