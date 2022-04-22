@@ -21,7 +21,7 @@ void config_port(struct termios *tty){
 
 //Call - at89prog <serial device> <hex file>
 //For now only device read is supported...
-int main(int argc, char **argv){
+int32_t main(int32_t argc, uint8_t **argv){
     if(argc != 3){
         fprintf(stderr, "Usage - at89prog <serial device> <hex file>\n");
         return 1;
@@ -35,7 +35,7 @@ int main(int argc, char **argv){
             return 2;
         }
 
-    int serial_port_fd  = open(ser_dev, O_RDWR);
+    int16_t serial_port_fd  = open(ser_dev, O_RDWR);
     if(serial_port_fd < 0){
         fprintf(stderr, "Error: %s\n", strerror(errno));
         return 3;
@@ -52,12 +52,25 @@ int main(int argc, char **argv){
 
     if(tcsetattr(serial_port_fd, TCSANOW, &tty)){
         fprintf(stderr, "Error: %s\n", strerror(errno));
-        return 4;
+        return 5;
     }
+
+    uint8_t msg[4] = {'R', 0x00, 0x00, 16};
+    write(serial_port_fd, msg, sizeof(msg));
+
+    uint8_t rcv[16];
+    memset(&rcv, '\0', sizeof(rcv));
+    int32_t numread = read(serial_port_fd, &rcv, sizeof(rcv));
+    if(numread < 0){
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+        return 6;
+    }
+    for(uint8_t *s = rcv; s && (s-rcv)<sizeof(rcv); s++)
+        printf("%02x ", *s);
+    printf("\n");
     
     close(serial_port_fd);
-    printf("Cool, working good!\n");
-    
+    //printf("Cool, working good!\n");
 
     //fprintf(hexfile, "test1");
     //fclose(hexfile);
