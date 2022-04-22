@@ -58,6 +58,8 @@ int32_t main(int32_t argc, uint8_t **argv){
     uint8_t msg[4] = {'R', 0x00, 0x00, 16};
     write(serial_port_fd, msg, sizeof(msg));
 
+    usleep(50000);
+
     uint8_t rcv[16];
     memset(&rcv, '\0', sizeof(rcv));
     int32_t numread = read(serial_port_fd, &rcv, sizeof(rcv));
