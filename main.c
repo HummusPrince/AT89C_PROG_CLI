@@ -15,8 +15,8 @@ void config_port(struct termios *tty){
     tty->c_oflag &= ~(OPOST | ONLCR);
     tty->c_cc[VTIME] = 20;
     tty->c_cc[VMIN] = 0;
-    cfsetispeed(tty, B4800);
-    cfsetospeed(tty, B4800);
+    cfsetispeed(tty, B115200);
+    cfsetospeed(tty, B115200);
 }
 
 //Call - at89prog <serial device> <hex file>
@@ -54,23 +54,28 @@ int32_t main(int32_t argc, uint8_t **argv){
         fprintf(stderr, "Error: %s\n", strerror(errno));
         return 5;
     }
-
+    
     uint8_t msg[4] = {'R', 0x00, 0x00, 16};
-    write(serial_port_fd, msg, sizeof(msg));
-
-    usleep(50000);
-
     uint8_t rcv[16];
     memset(&rcv, '\0', sizeof(rcv));
-    int32_t numread = read(serial_port_fd, &rcv, sizeof(rcv));
-    if(numread < 0){
-        fprintf(stderr, "Error: %s\n", strerror(errno));
-        return 6;
-    }
-    for(uint8_t *s = rcv; s && (s-rcv)<sizeof(rcv); s++)
-        printf("%02x ", *s);
-    printf("\n");
     
+    for (uint16_t i = 0; i < 0x1000; i++){
+        msg[1] = i<<4;
+        msg[2] = (uint8_t)((i >> 4) & 0xff);
+        write(serial_port_fd, msg, sizeof(msg));
+        usleep(5000);
+
+        int32_t numread = read(serial_port_fd, &rcv, sizeof(rcv));
+        if(numread < 0){
+            fprintf(stderr, "Error: %s\n", strerror(errno));
+            return 6;
+        }
+        for(uint8_t *s = rcv; s && (s-rcv) < sizeof(rcv); s++)
+            fprintf(hexfile,"%c", *s);
+            //fprintf(hexfile,"%02x ", *s);
+        //fprintf(hexfile, "\n");
+    }
+        
     close(serial_port_fd);
     //printf("Cool, working good!\n");
 
