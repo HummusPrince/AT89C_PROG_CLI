@@ -54,12 +54,34 @@ int32_t main(int32_t argc, uint8_t **argv){
         fprintf(stderr, "Error: %s\n", strerror(errno));
         return 5;
     }
-    
-    uint8_t msg[4] = {'R', 0x00, 0x00, 16};
-    uint8_t rcv[16];
+   
+    uint8_t rcv[17];
+    uint8_t o_msg[2] = {'O', 0x58};
+    write(serial_port_fd, o_msg, sizeof(o_msg));
+    usleep(5000);
+
+    int32_t numread = read(serial_port_fd, &rcv, sizeof(rcv));
+    if(numread < 0){
+        fprintf(stderr, "Error: %s\n", strerror(errno));
+        return 6;
+    }
+    else if (numread != 2){
+        fprintf(stderr, "Error: Packet was incorrectly received\n(%d bytes received, first is %c)\n", numread, rcv[(numread-1)&0x1f]);
+        return 7;
+    }
+    else if (rcv[1]!='O'){
+        fprintf(stderr, "Error: Option Bytes were not set\n(%02x expected but %02x received)\n", rcv[1], o_msg[0]);
+        return 8;
+    }
+    else if (rcv[0] != o_msg[1]&0x58){
+        fprintf(stderr, "Error: Option Bytes were not set correctly\n(%02x expected but %02x received)\n", o_msg[1]&0x58, rcv[0]);
+        return 9;
+    }
+
+    uint8_t msg[4] = {'C', 0x00, 0x00, 16};
     memset(&rcv, '\0', sizeof(rcv));
     
-    for (uint16_t i = 0; i < 0x1000; i++){
+    for (uint16_t i = 0x0000; i < 0x0100; i++){
         msg[1] = i<<4;
         msg[2] = (uint8_t)((i >> 4) & 0xff);
         write(serial_port_fd, msg, sizeof(msg));
@@ -70,7 +92,7 @@ int32_t main(int32_t argc, uint8_t **argv){
             fprintf(stderr, "Error: %s\n", strerror(errno));
             return 6;
         }
-        for(uint8_t *s = rcv; s && (s-rcv) < sizeof(rcv); s++)
+        for(uint8_t *s = rcv; s && (s-rcv) < sizeof(rcv) - 1; s++)
             fprintf(hexfile,"%c", *s);
             //fprintf(hexfile,"%02x ", *s);
         //fprintf(hexfile, "\n");
